@@ -1,4 +1,5 @@
 import socket
+import sys
 
 # URL 파싱
 class URL:
@@ -55,3 +56,24 @@ class URL:
         body = response.read()
         s.close()
         return body
+
+# HTML 태그를 제외하고 본문 텍스트만 출력
+def show(body):
+    # 처리 중인 글자가 부등호 안에 있으면 true
+    in_tag = False
+    for c in body:
+        if c == "<":
+            in_tag = True
+        elif c == ">":
+            in_tag = False
+        elif not in_tag:
+            print(c, end="")
+
+# 웹 페이지 요청 및 출력 실행
+def load(url):
+    body = url.request()
+    show(body)
+
+# 직접 실행 시 진입점
+if __name__ == "__main__":
+    load(URL(sys.argv[1]))
