@@ -1,22 +1,22 @@
 import socket
 import sys
 import ssl
+import tkinter
 
-# URL 파싱
+# 네트워크 계층
 class URL:
     def __init__(self, url):
-        # scheme 처리
+        # 1. 프로토콜(scheme) 분리
         self.scheme, url = url.split("://", 1)
-        # 실습 브라우저에서는 http만 사용 예정 + https 추가
         assert self.scheme in ["http", "https"]
 
-        # 암호화된 HTTP 연결은 443 포트를 사용
+        # 2. 프로토콜별 기본 포트 번호 설정
         if self.scheme == "http":
             self.port = 80
         elif self.scheme == "https":
             self.port = 443
 
-        # host, path 분리
+        # 3. 도메인(host), 경로(path) 분리
         if "/" not in url:
             url = url + "/"
         self.host, url = url.split("/", 1)
@@ -28,19 +28,19 @@ class URL:
             self.port = int(port)
 
 
-    # 다른 컴퓨터와 통신하기 위해 OS에서는 소켓이라는 기능을 제공함
-    # 소켓 통신을 하기 위해 다음과 같은 요소를 사용
+    # 실제 서버 접속 및 HTTP 요청/응답 처리 (OS 소켓 + 원격 서버 통신)
+    # 반환값은 HTTP 헤더를 제거한 순수 HTML 본문 문자열
     def request(self):
-        # family: 어떤 종류의 주소를 사용할지, AF_INET는 접속할 떄 주소를 IPv4 주소와 포틀 지정
-        # type: 데이터를 주고받는 방식
-        # proto: 사용할 통신 규칙
+        # AF_INET: IPv4 주소 체계 사용 (예: 93.184.216.34)
+        # SOCK_STREAM: 데이터가 유실되거나 순서가 바뀌지 않는 스트림 방식
+        # IPPROTO_TCP: 전송 규약으로 TCP 프로토콜 사용
         s = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
             proto=socket.IPPROTO_TCP,
         )
 
-        # 연결 지시
+        # OS 커널이 대신 TCP 3-way handshake(SYN → SYN-ACK → ACK)를 수행해 서버와 연결
         s.connect((self.host, self.port))
 
         # https인 경우 기존 TCP 소켓을 SSL 암호화 소켓으로 감싸기
@@ -61,8 +61,9 @@ class URL:
         # 응답을 나누어 처리
         statusline = response.readline()
         version, status, explanation = statusline.split(" ", 2)
-        response_headers = {}
 
+        # 응답 헤더 파싱
+        response_headers = {}
         while True:
             line = response.readline()
             if line == "\r\n": break
@@ -71,8 +72,10 @@ class URL:
 
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
+
         body = response.read()
         s.close()
+
         return body
 
 # HTML 태그를 제외하고 본문 텍스트만 출력
@@ -87,11 +90,33 @@ def show(body):
         elif not in_tag:
             print(c, end="")
 
-# 웹 페이지 요청 및 출력 실암
-def load(url):
-    body = url.request()
-    show(body)
+WIDTH, HEIGHT = 800, 600
+
+# 브라우저 코어
+class Browser:
+    def __init__(self):
+        # tkinter.Tk() 객체는 데스크톱 환경에 창을 만들도록 요청하고 무언가를 그리는데 사용할 객체를 반환
+        self.window = tkinter.Tk()
+        self.canvas = tkinter.Canvas(
+            self.window,
+            width=WIDTH,
+            height=HEIGHT
+        )
+        self.canvas.pack()
+
+    # 웹 페이지 요청 및 출력 실행
+    def load(self, url):
+        body = url.request()
+        show(body)
+
+        # 캔버스 위에 도형을 그리는 메서드
+        self.canvas.create_rectangle(10, 20, 400, 300)
+        self.canvas.create_oval(100, 100, 150, 150)
+        self.canvas.create_text(200, 150, text="Hi!")
+
 
 # 직접 실행 시 진입점
 if __name__ == "__main__":
-    load(URL(sys.argv[1]))
+    Browser().load(URL(sys.argv[1]))
+    # mainloop()를 호출하면 pendingEvent, handleEvent, drawScreen 루프가 돌아감
+    tkinter.mainloop()
