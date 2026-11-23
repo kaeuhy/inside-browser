@@ -93,6 +93,20 @@ def lex(body):
     return  text
 
 WIDTH, HEIGHT = 800, 600
+HSTEP, VSTEP = 13, 18
+SCROLL_STEP = 100
+
+def layout(text):
+    display_list = []
+    cursor_x, cursor_y = HSTEP, VSTEP
+    for c in text:
+        display_list.append((cursor_x, cursor_y, c))
+        cursor_x += HSTEP
+
+        if cursor_x >= WIDTH - HSTEP:
+            cursor_y += VSTEP
+            cursor_x = HSTEP
+    return display_list
 
 # 브라우저 코어
 class Browser:
@@ -106,27 +120,25 @@ class Browser:
         )
         self.canvas.pack()
 
+        self.scroll = 0
+        self.window.bind("<Down>", self.scrolldown)
+
     # 웹 페이지 요청 및 출력 실행
     def load(self, url):
         body = url.request()
         text = lex(body)
+        self.display_list = layout(text)
+        self.draw()
 
-        # 캔버스 위에 도형을 그리는 메서드
-        # self.canvas.create_rectangle(10, 20, 400, 300)
-        # self.canvas.create_oval(100, 100, 150, 150)
-        # self.canvas.create_text(200, 150, text="Hi!")
+    # 디스플레이 리스트를 화면 좌표계로 변환해 그리기
+    def draw(self):
+        self.canvas.delete("all")
+        for x, y, c in self.display_list:
+            self.canvas.create_text(x, y - self.scroll, text=c)
 
-        HSTEP, VSTEP = 13, 18
-        cursor_x, cursor_y = HSTEP, VSTEP
-
-        for c in text:
-            self.canvas.create_text(cursor_x, cursor_y, text=c)
-            cursor_x += HSTEP
-
-            if cursor_x >= WIDTH - HSTEP:
-                cursor_y += VSTEP
-                cursor_x = HSTEP
-
+    def scrolldown(self, e):
+        self.scroll += SCROLL_STEP
+        self.draw()
 
 # 직접 실행 시 진입점
 if __name__ == "__main__":
