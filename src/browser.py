@@ -2,6 +2,7 @@ import socket
 import sys
 import ssl
 import tkinter
+import tkinter.font
 
 # 네트워크 계층
 class URL:
@@ -93,19 +94,34 @@ def lex(body):
     return  text
 
 WIDTH, HEIGHT = 800, 600
+# 기본 가로, 세로 여백
 HSTEP, VSTEP = 13, 18
+# 아래 방향키  한 번당 스크롤 이동 픽셀
 SCROLL_STEP = 100
 
 def layout(text):
     display_list = []
     cursor_x, cursor_y = HSTEP, VSTEP
-    for c in text:
-        display_list.append((cursor_x, cursor_y, c))
-        cursor_x += HSTEP
+    font = tkinter.font.Font()
 
-        if cursor_x >= WIDTH - HSTEP:
-            cursor_y += VSTEP
+    # 단어 단위로 좌표를 계산
+    for word in text.split():
+        w = font.measure(word)
+        if cursor_x + w > WIDTH - HSTEP:
+            cursor_y += font.metrics("linespace") * 1.25
             cursor_x = HSTEP
+        display_list.append((cursor_x, cursor_y, word))
+        cursor_x += w + font.measure(" ")
+
+    # 글자 단위로 좌표를 계산
+    # for c in text:
+    #     display_list.append((cursor_x, cursor_y, c))
+    #     cursor_x += HSTEP
+    #
+    #     if cursor_x >= WIDTH - HSTEP:
+    #         cursor_y += VSTEP
+    #         cursor_x = HSTEP
+
     return display_list
 
 # 브라우저 코어
