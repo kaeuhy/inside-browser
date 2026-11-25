@@ -79,19 +79,47 @@ class URL:
 
         return body
 
+class Text:
+    def __init__(self, text):
+        self.text = text
+
+class Tag:
+    def __init__(self, tag):
+        self.tag = tag
+
 # HTML 태그를 제외하고 본문 텍스트만 출력
 def lex(body):
-    text = ""
-    # 처리 중인 글자가 부등호 안에 있으면 true
+    # text = ""
+    # # 처리 중인 글자가 부등호 안에 있으면 true
+    # in_tag = False
+    # for c in body:
+    #     if c == "<":
+    #         in_tag = True
+    #     elif c == ">":
+    #         in_tag = False
+    #     elif not in_tag:
+    #         text += c
+    # return  text
+
+    out = []
+    buffer = ""
     in_tag = False
     for c in body:
         if c == "<":
             in_tag = True
+            if buffer:
+                out.append(Text(buffer))
+            buffer = ""
         elif c == ">":
             in_tag = False
-        elif not in_tag:
-            text += c
-    return  text
+            out.append(Tag(buffer))
+            buffer = ""
+        else:
+            buffer += c
+    if not in_tag and buffer:
+        out.append(Text(buffer))
+    return out
+
 
 WIDTH, HEIGHT = 800, 600
 # 기본 가로, 세로 여백
@@ -99,19 +127,43 @@ HSTEP, VSTEP = 13, 18
 # 아래 방향키  한 번당 스크롤 이동 픽셀
 SCROLL_STEP = 100
 
-def layout(text):
+def layout(tokens):
     display_list = []
     cursor_x, cursor_y = HSTEP, VSTEP
-    font = tkinter.font.Font()
+    weight = "normal"
+    style = "roman"
 
-    # 단어 단위로 좌표를 계산
-    for word in text.split():
-        w = font.measure(word)
-        if cursor_x + w > WIDTH - HSTEP:
-            cursor_y += font.metrics("linespace") * 1.25
-            cursor_x = HSTEP
-        display_list.append((cursor_x, cursor_y, word))
-        cursor_x += w + font.measure(" ")
+    for tok in tokens:
+        if isinstance(tok, Text):
+            for word in tok.text.split():
+                font = tkinter.font.Font(
+                    size=16,
+                    weight=weight,
+                    slant=style,
+                )
+                w = font.measure(word)
+                if cursor_x + w > WIDTH - HSTEP:
+                    cursor_y += font.metrics("linespace") * 1.25
+                    cursor_x = HSTEP
+                display_list.append((cursor_x, cursor_y, word, font))
+                cursor_x += w + font.measure(" ")
+        elif tok.tag == "i":
+            style = "italic"
+        elif tok.tag == "/i":
+            style = "roman"
+        elif tok.tag == "b":
+            weight = "bold"
+        elif tok.tag == "/b":
+            weight = "normal"
+    #
+    # # 단어 단위로 좌표를 계산
+    # for word in text.split():
+    #     w = font.measure(word)
+    #     if cursor_x + w > WIDTH - HSTEP:
+    #         cursor_y += font.metrics("linespace") * 1.25
+    #         cursor_x = HSTEP
+    #     display_list.append((cursor_x, cursor_y, word))
+    #     cursor_x += w + font.measure(" ")
 
     # 글자 단위로 좌표를 계산
     # for c in text:
